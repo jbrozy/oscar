@@ -2,7 +2,7 @@
 
 ## Description
 
-**osc-route** This library is for educational purposes. The idea is to make dedicated Endpoints for the OSC Protocol by parsing the OSC-Message
+This library is for educational purposes. The idea is to make dedicated Endpoints for the OSC Protocol by parsing the OSC-Message
 and forward it via the OSC Router to the matching Controller. Since this library uses the Reflection-API the processing of a single OSC-Message will be noticably slower.
 
 ## Features
