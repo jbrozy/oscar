@@ -10,7 +10,7 @@ public class LightController {
   }
 
   @OSCNamespace(route = "x?y?/test", hasParams = true)
-  public void paramterized(@OSCAttribute Integer a, @OSCAttribute Integer b){
-    System.out.printf("X: %s Y: %s\n", a, b);
+  public void parameterized(@OSCAttribute Integer a, @OSCAttribute Integer b, @OSCAttribute String filter){
+    // System.out.printf("X: %s Y: %s, message: %s\n", a, b, filter);
   }
 }

@@ -1,8 +1,6 @@
 package org.routing;
 
-import ch.qos.logback.core.joran.sanity.Pair;
 import jakarta.annotation.PostConstruct;
-import org.annotations.NamespaceNode;
 import org.annotations.OSCController;
 import org.annotations.OSCNamespace;
 import org.exceptions.OSCException;
@@ -14,8 +12,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 @Component
 public class OSCRouter {
@@ -43,6 +41,7 @@ public class OSCRouter {
                 OSCNamespace namespace = method.getAnnotation(OSCNamespace.class);
                 String route = "/" + controller.route() + "/" + namespace.route();
                 route = route.replace("?", "(\\d+)");
+                String regexPattern = route.replace("?", "(\\\\w+)");
                 System.out.println("Route, " + route);
                 routes.putIfAbsent(Pattern.compile(route), method);
             }
@@ -68,39 +67,41 @@ public class OSCRouter {
         if(match.isEmpty()) {
             throw new OSCException("Method not found!");
         }
+
         var matcher = match.get().getKey().matcher(namespace);
-        List<Object> paramsList = new ArrayList<>();
-        var result = matcher.toMatchResult();
+        ArrayList<Object> namespaceParams = new ArrayList<>();
+        if (matcher.matches()) {
+            for (int i = 1; i <= matcher.groupCount(); i++) {
+                namespaceParams.add( Integer.parseInt(matcher.group(i)));
+            }
+            namespaceParams.addAll(Arrays.stream(params).toList());
+        }
 
-        System.out.println(matcher.group(1));
-        // match.ifPresent(objects -> paramsList.addAll(Arrays.stream(objects.getValue()).toList()));
-        // paramsList.add(params);
+        // Validate parameter count and types
+        final Method method = match.get().getValue();
+        final var functionParams = method.getParameterTypes();
+        final int functionParamsCount = functionParams.length;
+        if (functionParamsCount != namespaceParams.size()) {
+            throw new OSCException("Invalid argument count for calling function: %s".formatted(method.getName()));
+        }
 
-        // // Validate parameter count and types
-        // final Method method = match.get().getKey();
-        // final var functionParams = method.getParameterTypes();
-        // final int functionParamsCount = functionParams.length;
-        // if (functionParamsCount != params.length) {
-        //     throw new OSCException("Invalid argument count for calling function: %s".formatted(method.getName()));
-        // }
+        for (int i = 0; i < functionParams.length; ++i) {
+            final Object obj = namespaceParams.get(i);
+            final Class<?> type = functionParams[i];
+            if (!type.isAssignableFrom(obj.getClass())) {
+                throw new OSCException("Invalid argument at Index: %d".formatted(i));
+            }
+        }
 
-        // for (int i = 0; i < functionParams.length; ++i) {
-        //     final Object obj = params[i];
-        //     final Class<?> type = functionParams[i];
-        //     if (obj != null && !type.isAssignableFrom(obj.getClass())) {
-        //         throw new OSCException("Invalid argument at Index: %d".formatted(i));
-        //     }
-        // }
+        // Use class cache or get a new instance from the ApplicationContext
+        String className = method.getDeclaringClass().getName();
+        final Object instance = _classCache
+                .computeIfAbsent(className,
+                        name -> context.getBean(method.getDeclaringClass())
+                );
 
-        // // Use class cache or get a new instance from the ApplicationContext
-        // String className = method.getDeclaringClass().getName();
-        // final Object instance = _classCache
-        //         .computeIfAbsent(className,
-        //                 name -> context.getBean(method.getDeclaringClass())
-        //         );
-
-        // // Invoke the method with parameters
-        // method.invoke(instance, paramsList.toArray());
+        // Invoke the method with parameters
+        method.invoke(instance, namespaceParams.toArray());
     }
 }
 

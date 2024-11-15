@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 
 @OSCMain(controllers = { PositionController.class, LightController.class })
-@ComponentScan(basePackages = {"org.routing", "org.controller", "org.injectables"})
+@ComponentScan(basePackages = {"org.routing", "org.controller", "org.injectables", "org.benchmark"})
 public class Main {
     public static void main(String[] args) {
         OSCApplication.run(Main.class, args);
@@ -21,7 +21,7 @@ public class Main {
         return args -> {
             String[] beanNames = ctx.getBeanDefinitionNames();
             for (String beanName : beanNames) {
-                System.out.println("Registered: " + beanName);
+                // System.out.println("Registered: " + beanName);
             }
         };
     }
